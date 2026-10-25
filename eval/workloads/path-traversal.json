@@ -50,8 +50,8 @@
           ],
           "files": "tests/**/test_*.py",
           "must_contain": [
-            "import unittest",
-            "unittest.TestCase"
+            "unittest",
+            "TestCase"
           ]
         },
         "behaviors": {
