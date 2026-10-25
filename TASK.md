@@ -36,7 +36,7 @@ Treat this as a real PR review where you have commit access: if you'd want a tes
   a temporary directory your test creates; never write an absolute path as a
   string literal. `tests/test_portability.py` enforces this and will tell you
   immediately.
-- Do not modify existing tests — only add new ones.
+- Add your tests in a new file under tests/. Do not change the existing test files at all, not even their imports.
 - Do not modify source code under files_app/. Tests only.
 - Match the existing test file style: standard-library `unittest` with `unittest.TestCase` classes. There are no third-party packages and no install step.
 - Iterate by running the suite:
