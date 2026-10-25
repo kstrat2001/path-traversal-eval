@@ -1,0 +1,122 @@
+{
+  "schema_version": "1.2",
+  "_comment": "The eval's own workload and grader: darkmux processes this eval, this folder defines it. `darkmux lab fixture register <this repo>`, then `darkmux lab run path-traversal -p <profile>`. No dependencies; the 9-test baseline runs in well under a second. Graded by verify.grade: every check quotes the prompt sentence it grades. Python's unittest writes no JUnit, so eval/build_workload.py embeds eval/tools/run_junit.py into the suite command (the grader runs it in a copy of the result, where eval/ does not exist). Atomic writes are in the prompt but not graded. The sandbox and the grader run in the pinned Python 3.13 image (workload.image), not darkmux's default image. This folder is never copied into the model's sandbox.",
+  "workload": {
+    "id": "path-traversal",
+    "provider": "coding-task",
+    "role": "coder",
+    "description": "Multi-turn QA review of an attachment storage module on the public path-traversal-eval fixture (github.com/kstrat2001/path-traversal-eval, MIT). The agent must write the tests the baseline lacks; planted bugs from real path-traversal incidents grade whether those tests catch them.",
+    "prompt": "QA REVIEW REQUEST — attachment storage\n\nAn attachment storage module was recently merged. This is a security-sensitive surface — every file name it receives comes from a user (a download link, an upload form, a delete button, a folder listing, the member names inside an uploaded zip), and a name that reaches outside the storage root reads, overwrites or deletes files the user must never touch — and it needs adequate test coverage before deployment.\n\nWhat changed:\n\n- Every operation (read_file, save_file, delete_file, list_dir, extract_archive) maps the user's name to a path under the storage root through safe_path, and raises PathRefused for any name that would land outside it\n- Names with `..` segments and absolute names are refused when they resolve outside the root\n- The check compares whole path components, so a sibling folder whose name merely starts with the root's name (`files-private` next to `files`) is outside the root\n- Symlinks are resolved before the check: a link inside the root that points outside it is refused\n- extract_archive checks every member name before writing anything: one member that would land outside the root refuses the whole archive, and nothing from it is written\n- save_file writes atomically and creates missing folders under the root\n\nThe implementation lives at:\n\n- ${SANDBOX_DIR}/files_app/storage.py\n\nExisting tests:\n\n- ${SANDBOX_DIR}/tests/test_storage.py\n- ${SANDBOX_DIR}/tests/test_portability.py (a guard on the suite itself; leave it alone)\n\nSome coverage is already in place. Some isn't. Your job is to figure out the difference, decide what matters, and write the tests yourself.\n\n## Your task\n\nRead the implementation. Read the existing tests. Decide which behaviors of the change aren't covered and would matter to you in a real code review. Then write those tests — don't hand them back as a list of suggestions.\n\nTreat this as a real PR review where you have commit access: if you'd want a test to exist before approving, write it.\n\n## Constraints\n\n- Repo root: ${SANDBOX_DIR}.\n- Your tests must run in a DIFFERENT environment than this one, where that\n  path does not exist. Build every path at run time, from `Path(__file__)` or\n  a temporary directory your test creates; never write an absolute path as a\n  string literal. `tests/test_portability.py` enforces this and will tell you\n  immediately.\n- Do not modify existing tests — only add new ones.\n- Do not modify source code under files_app/. Tests only.\n- Match the existing test file style: standard-library `unittest` with `unittest.TestCase` classes. There are no third-party packages and no install step.\n- Iterate by running the suite:\n  cd ${SANDBOX_DIR} && python3 -m unittest discover -s tests -t .\n- Final verification is the same command:\n  cd ${SANDBOX_DIR} && python3 -m unittest discover -s tests -t .\n\n## When you're done\n\nYou're done when the tests you've added are sufficient for you to approve this PR. Quality over quantity. Stop when adding more tests would be padding rather than risk reduction.\n\nMost reviewers would land somewhere between 5 and 15 new test cases for a change of this surface area. If you're well outside that range in either direction, mention it in your reply.\n\n## Reply format\n\nKeep it tight:\n\n- Gaps you identified: behaviors that needed coverage, one-line rationale per gap\n- What you wrote: number of new tests, which files\n- What you decided NOT to test, and why: the negative space matters\n- Test result: the `Ran N tests` line from your final run\n- Confidence: would you sign off on this PR after your additions?\n",
+    "requiresExternalSandbox": true,
+    "requires_fixture": "python-path-traversal@1.0",
+    "verify": {
+      "command": "python3 -m unittest discover -s tests -t .",
+      "must_contain": [],
+      "must_not_contain": [],
+      "grade": {
+        "scope": {
+          "asks": [
+            "Do not modify source code under files_app/. Tests only.",
+            "Do not modify existing tests — only add new ones.",
+            "(a guard on the suite itself; leave it alone)"
+          ],
+          "may_add": [
+            "tests/**"
+          ],
+          "append_only": [
+            "tests/test_storage.py"
+          ],
+          "comment_prefixes": [
+            "#"
+          ]
+        },
+        "suite": {
+          "asks": [
+            "Then write those tests — don't hand them back as a list of suggestions.",
+            "Final verification is the same command:"
+          ],
+          "command": "python3 - ${REPORT} <<'DARKMUX_GRADE'\n\"\"\"Run the result's tests and write JUnit XML.\n\ndarkmux's grader reads JUnit, and Python's unittest does not write it, so this\nstandard-library runner does. `eval/build_workload.py` embeds this file into\nthe workload's suite command, because the grader runs that command in a copy\nof the result where eval/ does not exist.\n\"\"\"\n\nimport sys\nimport unittest\nfrom pathlib import Path\nfrom xml.sax.saxutils import quoteattr\n\n\nclass Recorder(unittest.TestResult):\n    def __init__(self):\n        super().__init__()\n        self.cases = []\n\n    def addSuccess(self, test):\n        self.cases.append((test, None))\n\n    def addFailure(self, test, err):\n        self.cases.append((test, (\"failure\", self._exc_info_to_string(err, test))))\n\n    def addError(self, test, err):\n        self.cases.append((test, (\"error\", self._exc_info_to_string(err, test))))\n\n    def addSkip(self, test, reason):\n        self.cases.append((test, (\"skipped\", reason)))\n\n\ndef main(report):\n    root = Path.cwd()\n    sys.path.insert(0, str(root))\n    suite = unittest.TestLoader().discover(str(root / \"tests\"), top_level_dir=str(root))\n    result = Recorder()\n    suite.run(result)\n\n    lines = ['<?xml version=\"1.0\" encoding=\"utf-8\"?>', \"<testsuites><testsuite>\"]\n    for test, outcome in result.cases:\n        name = quoteattr(test.id())\n        if outcome is None:\n            lines.append(f\"<testcase name={name}/>\")\n        else:\n            kind, text = outcome\n            lines.append(f\"<testcase name={name}><{kind} message={quoteattr(text[-2000:])}/></testcase>\")\n    lines.append(\"</testsuite></testsuites>\")\n    Path(report).write_text(\"\\n\".join(lines) + \"\\n\")\n\n    failed = [t.id() for t, o in result.cases if o and o[0] != \"skipped\"]\n    for test, outcome in result.cases:\n        print((\"ok   \" if outcome is None else outcome[0].ljust(5)), test.id())\n    print(f\"{len(result.cases) - len(failed)} of {len(result.cases)} passed\")\n    return 1 if failed or not result.cases else 0\n\n\nif __name__ == \"__main__\":\n    sys.exit(main(sys.argv[1]))\nDARKMUX_GRADE\n",
+          "report": "junit",
+          "more_than_baseline": true
+        },
+        "portable": {
+          "asks": [
+            "Your tests must run in a DIFFERENT environment than this one"
+          ]
+        },
+        "style": {
+          "asks": [
+            "Match the existing test file style: standard-library `unittest` with `unittest.TestCase` classes."
+          ],
+          "files": "tests/**/test_*.py",
+          "must_contain": [
+            "import unittest",
+            "unittest.TestCase"
+          ]
+        },
+        "behaviors": {
+          "asks": [
+            "Decide which behaviors of the change aren't covered and would matter to you in a real code review."
+          ],
+          "mutants": [
+            {
+              "behavior": "download",
+              "file": "files_app/storage.py",
+              "find": "path = self.safe_path(name)",
+              "replace": "path = self.root / name"
+            },
+            {
+              "behavior": "upload",
+              "file": "files_app/storage.py",
+              "find": "target = self.safe_path(name)",
+              "replace": "target = self.root / name"
+            },
+            {
+              "behavior": "delete",
+              "file": "files_app/storage.py",
+              "find": "existing = self.safe_path(name)",
+              "replace": "existing = self.root / name"
+            },
+            {
+              "behavior": "folder listing",
+              "file": "files_app/storage.py",
+              "find": "folder = self.safe_path(name)",
+              "replace": "folder = self.root / name"
+            },
+            {
+              "behavior": "archive extraction",
+              "file": "files_app/storage.py",
+              "find": "dest = self.safe_path(os.path.join(into, member.filename))",
+              "replace": "dest = self.root / into / member.filename"
+            },
+            {
+              "behavior": "archive extraction",
+              "file": "files_app/storage.py",
+              "find": "            for dest, member in planned:\n",
+              "replace": "                dest.parent.mkdir(parents=True, exist_ok=True)\n                dest.write_bytes(archive.read(member))\n            for dest, member in planned:\n"
+            },
+            {
+              "behavior": "sibling folder",
+              "file": "files_app/storage.py",
+              "find": "if not candidate.is_relative_to(self.root):",
+              "replace": "if not str(candidate).startswith(str(self.root)):"
+            },
+            {
+              "behavior": "symlinks",
+              "file": "files_app/storage.py",
+              "find": "candidate = (self.root / name).resolve()",
+              "replace": "candidate = Path(os.path.normpath(self.root / name))"
+            }
+          ]
+        },
+        "reply": {
+          "asks": [
+            "## Reply format"
+          ],
+          "required": true
+        }
+      }
+    },
+    "image": "python:3.13-slim@sha256:d98cc29d3266e535dd9da1099688d9cb3ca4753813571e071763d17725460962"
+  }
+}

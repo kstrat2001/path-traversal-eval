@@ -1,0 +1,24 @@
+{
+  "name": "path-traversal-eval",
+  "version": "1.0",
+  "satisfies": "python-path-traversal@1.0",
+  "language": "python",
+  "verify_command": "python3 -m unittest discover -s tests -t .",
+  "baseline": {
+    "test_count": 9,
+    "service_test_files": [
+      "tests/test_storage.py",
+      "tests/test_portability.py"
+    ]
+  },
+  "required_files": [
+    "files_app/__init__.py",
+    "files_app/storage.py",
+    "tests/__init__.py",
+    "tests/test_storage.py",
+    "tests/test_portability.py",
+    "eval/workloads/path-traversal.json"
+  ],
+  "schema_version": "1.1",
+  "eval_dir": "eval"
+}
