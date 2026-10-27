@@ -57,49 +57,57 @@
               "behavior": "download",
               "file": "files_app/storage.py",
               "find": "path = self.safe_path(name)",
-              "replace": "path = self.root / name"
+              "replace": "path = self.root / name",
+              "criterion": "download"
             },
             {
               "behavior": "upload",
               "file": "files_app/storage.py",
               "find": "target = self.safe_path(name)",
-              "replace": "target = self.root / name"
+              "replace": "target = self.root / name",
+              "criterion": "upload"
             },
             {
               "behavior": "delete",
               "file": "files_app/storage.py",
               "find": "existing = self.safe_path(name)",
-              "replace": "existing = self.root / name"
+              "replace": "existing = self.root / name",
+              "criterion": "delete"
             },
             {
               "behavior": "folder listing",
               "file": "files_app/storage.py",
               "find": "folder = self.safe_path(name)",
-              "replace": "folder = self.root / name"
+              "replace": "folder = self.root / name",
+              "criterion": "folder-listing"
             },
             {
               "behavior": "archive extraction",
               "file": "files_app/storage.py",
               "find": "dest = self.safe_path(os.path.join(into, member.filename))",
-              "replace": "dest = self.root / into / member.filename"
+              "replace": "dest = self.root / into / member.filename",
+              "criterion": "archive-extraction"
             },
             {
               "behavior": "archive extraction",
               "file": "files_app/storage.py",
               "find": "            for dest, member in planned:\n",
-              "replace": "                dest.parent.mkdir(parents=True, exist_ok=True)\n                dest.write_bytes(archive.read(member))\n            for dest, member in planned:\n"
+              "replace": "                dest.parent.mkdir(parents=True, exist_ok=True)\n                dest.write_bytes(archive.read(member))\n            for dest, member in planned:\n",
+              "criterion": "archive-extraction"
             },
             {
               "behavior": "sibling folder",
               "file": "files_app/storage.py",
               "find": "if not candidate.is_relative_to(self.root):",
-              "replace": "if not str(candidate).startswith(str(self.root)):"
+              "replace": "if not str(candidate).startswith(str(self.root)):",
+              "criterion": "sibling-folder"
             },
             {
               "behavior": "symlinks",
               "file": "files_app/storage.py",
               "find": "candidate = (self.root / name).resolve()",
-              "replace": "candidate = Path(os.path.normpath(self.root / name))"
+              "replace": "candidate = Path(os.path.normpath(self.root / name))",
+              "criterion": "symlinks"
             }
           ]
         },
@@ -108,7 +116,72 @@
             "## Reply format"
           ],
           "required": true
-        }
+        },
+        "criteria": [
+          {
+            "id": "download",
+            "name": "Download refuses outside names",
+            "description": "read_file refuses a name that resolves outside the storage root.",
+            "source": {
+              "path": "files_app/storage.py",
+              "anchor": "path = self.safe_path(name)"
+            }
+          },
+          {
+            "id": "upload",
+            "name": "Upload refuses outside names",
+            "description": "save_file refuses a name that resolves outside the storage root and writes nothing.",
+            "source": {
+              "path": "files_app/storage.py",
+              "anchor": "target = self.safe_path(name)"
+            }
+          },
+          {
+            "id": "delete",
+            "name": "Delete refuses outside names",
+            "description": "delete_file refuses a name that resolves outside the storage root and deletes nothing.",
+            "source": {
+              "path": "files_app/storage.py",
+              "anchor": "existing = self.safe_path(name)"
+            }
+          },
+          {
+            "id": "folder-listing",
+            "name": "Listing refuses outside folders",
+            "description": "list_dir refuses a folder name that resolves outside the storage root.",
+            "source": {
+              "path": "files_app/storage.py",
+              "anchor": "folder = self.safe_path(name)"
+            }
+          },
+          {
+            "id": "archive-extraction",
+            "name": "Archive extraction all or nothing",
+            "description": "extract_archive refuses an archive with any member that would land outside the root, and writes nothing from it.",
+            "source": {
+              "path": "files_app/storage.py",
+              "anchor": "dest = self.safe_path(os.path.join(into, member.filename))"
+            }
+          },
+          {
+            "id": "sibling-folder",
+            "name": "Sibling folder is outside",
+            "description": "A sibling folder whose name merely starts with the root's name is outside the root and refused.",
+            "source": {
+              "path": "files_app/storage.py",
+              "anchor": "if not candidate.is_relative_to(self.root):"
+            }
+          },
+          {
+            "id": "symlinks",
+            "name": "Symlinks resolved first",
+            "description": "A symlink inside the root that points outside it is refused.",
+            "source": {
+              "path": "files_app/storage.py",
+              "anchor": "candidate = (self.root / name).resolve()"
+            }
+          }
+        ]
       }
     },
     "image": "python:3.13-slim@sha256:d98cc29d3266e535dd9da1099688d9cb3ca4753813571e071763d17725460962"
