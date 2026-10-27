@@ -1,6 +1,6 @@
 {
   "name": "path-traversal-eval",
-  "version": "1.1",
+  "version": "1.2",
   "satisfies": "python-path-traversal@1.0",
   "language": "python",
   "verify_command": "python3 -m unittest discover -s tests -t .",
