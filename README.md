@@ -6,6 +6,21 @@ The subject is an attachment storage module that turns user-supplied file
 names into paths under one root folder: small enough to read in one sitting,
 and easy to cover with tests that look complete while missing every escape.
 
+## At a glance
+
+| | |
+| --- | --- |
+| Kind | Coding with tools: the model edits and runs a sandboxed copy of this repo, without `eval/` |
+| Version | 1.3 (tag `1.3`, commit `4dda908`) |
+| Criteria | 7, each recorded as met or missed on every run |
+| Results | [evals.darkmux.com/evals/path-traversal-eval](https://evals.darkmux.com/evals/path-traversal-eval) |
+| Needs | darkmux 5.9.0 or later |
+| License | MIT |
+
+The eval's page on evals.darkmux.com names the approved commit, lists the
+criteria and shows which ones each run met. The criteria are not listed here
+because this file is inside the model's sandbox.
+
 ## What the code does
 
 - `read_file`, `save_file`, `delete_file`, `list_dir` and `extract_archive`
@@ -44,17 +59,30 @@ python3 -m unittest discover -s tests -t .   # 9 passing, no install step
 
 Python 3.9 or newer, standard library only.
 
-## Using it as a darkmux fixture
-
-`eval/` holds the darkmux workload (`eval/workloads/path-traversal.json`): the
-prompt and the rules that grade the result, each quoting the prompt sentence
-it checks, with the planted bugs. `eval/` is never copied into the model's
-sandbox.
+## Run it with darkmux
 
 ```bash
-darkmux lab fixture register /path/to/path-traversal-eval
+git clone https://github.com/kstrat2001/path-traversal-eval
+cd path-traversal-eval
+git checkout <approved commit>     # named on the eval's page
+darkmux lab fixture register .
 darkmux lab run path-traversal -p <profile>
+darkmux run inspect <run id>       # the verdict, time and turns
 ```
+
+Leave the checkout unchanged: a run from any other commit, or from a checkout
+with changes in it, cannot be shared. To share a run on evals.darkmux.com, run
+`darkmux lab submit <run id> --dry-run` to see exactly what would be sent, then
+`darkmux lab submit <run id>`. The
+[share-runs guide](https://darkmux.com/guide/share-runs.html) covers upload
+access and what a bundle carries.
+
+## What `eval/` holds
+
+`eval/` holds the darkmux workload (`eval/workloads/path-traversal.json`): the
+prompt, the rules that grade the result (each quoting the prompt sentence it
+checks) and the planted bugs. `eval/` is never copied into the model's
+sandbox.
 
 ## License
 
